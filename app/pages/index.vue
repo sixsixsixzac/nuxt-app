@@ -116,7 +116,7 @@ const selectedCategoryIds = ref<number[]>(
 const currentPage = ref(1)
 const skip = computed(() => (currentPage.value - 1) * PAGE_SIZE)
 
-const { categories } = await useCategories({ limit: 1000, skip: 0 })
+const { categories } = useCategoryProvider()
 
 const categoryOptions = computed(() =>
   categories.value.map((c) => ({

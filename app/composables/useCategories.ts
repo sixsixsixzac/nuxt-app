@@ -11,24 +11,19 @@ interface CategoriesResponse {
   limit: number
 }
 
-export function useCategories(options: {
-  limit: number
-  skip: MaybeRefOrGetter<number>
-}) {
+const CATEGORIES_PROVIDER_KEY = 'categories-provider'
+const CATEGORIES_FETCH_LIMIT = 1000
+
+export function useCategoryProvider() {
   const config = useRuntimeConfig()
   const base = config.public.apiBase as string
-  const skipRef = computed(() => toValue(options.skip))
 
   const { data, pending, error, refresh } = useAsyncData(
-    () => `categories-${options.limit}-${skipRef.value}`,
+    CATEGORIES_PROVIDER_KEY,
     () =>
       $fetch<CategoriesResponse>(`${base}/categories`, {
-        params: {
-          limit: options.limit,
-          skip: skipRef.value,
-        },
+        params: { limit: CATEGORIES_FETCH_LIMIT, skip: 0 },
       }),
-    { watch: [skipRef] },
   )
 
   const categories = computed(() => data.value?.categories ?? [])
@@ -93,8 +88,16 @@ export async function updateCategory(id: number, payload: { name: string }): Pro
   })
 }
 
-export async function deleteCategory(id: number): Promise<void> {
+export async function deleteCategory(
+  id: number,
+  options?: { transferToCategoryId?: number | null },
+): Promise<void> {
   const config = useRuntimeConfig()
   const base = config.public.apiBase as string
-  await $fetch(`${base}/categories/${id}`, { method: 'DELETE' })
+  const transferId = options?.transferToCategoryId
+  const query =
+    transferId != null && transferId !== null && Number.isInteger(transferId)
+      ? { transferToCategoryId: String(transferId) }
+      : undefined
+  await $fetch(`${base}/categories/${id}`, { method: 'DELETE', query })
 }

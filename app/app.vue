@@ -24,4 +24,6 @@
 const route = useRoute()
 const isHome = computed(() => route.path === '/')
 const isCategories = computed(() => route.path === '/categories')
+
+useCategoryProvider()
 </script>
