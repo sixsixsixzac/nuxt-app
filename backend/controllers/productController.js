@@ -39,8 +39,17 @@ export async function list(req, res) {
     const skip = Math.max(0, Number(req.query.skip) || 0)
     const categoryIds = parseCategoryIds(req.query.categoryId)
     const selectFields = parseSelectFields(req.query.select)
+    const searchQ = typeof req.query.q === 'string' ? req.query.q.trim() : ''
 
-    const filter = categoryIds.length > 0 ? { categoryId: { $in: categoryIds } } : {}
+    const filter = {}
+    if (categoryIds.length > 0) filter.categoryId = { $in: categoryIds }
+    if (searchQ) {
+      const re = new RegExp(searchQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+      filter.$or = [
+        { title: re },
+        { brand: re },
+      ]
+    }
     const total = await Product.countDocuments(filter)
 
     const query = Product.find(filter).sort({ id: 1 }).skip(skip).limit(limit).lean()

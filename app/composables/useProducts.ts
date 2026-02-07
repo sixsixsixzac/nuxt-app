@@ -21,23 +21,26 @@ export function useProducts(options: {
   limit: number
   skip: MaybeRefOrGetter<number>
   categoryIds?: MaybeRefOrGetter<number[]>
+  search?: MaybeRefOrGetter<string>
 }) {
   const config = useRuntimeConfig()
   const base = config.public.apiBase as string
   const skipRef = computed(() => toValue(options.skip))
   const categoryIdsRef = computed(() => toValue(options.categoryIds ?? []) ?? [])
+  const searchRef = computed(() => (toValue(options.search ?? '') ?? '').trim())
 
   const { data, pending, error, refresh } = useAsyncData(
-    () => `products-${options.limit}-${skipRef.value}-${categoryIdsRef.value.join(',')}`,
+    () => `products-${options.limit}-${skipRef.value}-${categoryIdsRef.value.join(',')}-${searchRef.value}`,
     () =>
       $fetch<ProductsResponse>(`${base}/products`, {
         params: {
           limit: options.limit,
           skip: skipRef.value,
           ...(categoryIdsRef.value.length > 0 ? { categoryId: categoryIdsRef.value } : {}),
+          ...(searchRef.value ? { q: searchRef.value } : {}),
         },
       }),
-    { watch: [skipRef, categoryIdsRef] },
+    { watch: [skipRef, categoryIdsRef, searchRef] },
   )
 
   const products = computed(() => data.value?.products ?? [])
