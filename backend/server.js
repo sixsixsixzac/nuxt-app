@@ -23,7 +23,13 @@ async function connectDb() {
   console.log('MongoDB connected')
 }
 
+// Categories
 app.get('/categories', categoryController.list)
+app.post('/categories', categoryController.create)
+app.put('/categories/:id', categoryController.update)
+app.delete('/categories/:id', categoryController.remove)
+
+// Products
 app.get('/products', productController.list)
 app.post('/products', productController.create)
 app.put('/products/:id', productController.update)
