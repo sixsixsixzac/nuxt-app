@@ -33,7 +33,6 @@
       :range-end="rangeEnd"
       :total="total"
       :page-numbers="pageNumbers"
-      @view="onView"
       @edit="onEdit"
       @delete="onDelete"
     />
@@ -151,10 +150,6 @@ const pageNumbers = computed(() => {
   if (total > 1) pages.push(total)
   return pages
 })
-
-function onView(product: Product) {
-  console.log('View', product.id)
-}
 
 function onDelete(product: Product) {
   confirm.require({

@@ -42,11 +42,6 @@
             <td class="px-4 py-3 text-center">
               <div class="flex items-center justify-center gap-2">
                 <button type="button"
-                  class="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
-                  @click="$emit('view', product)">
-                  View
-                </button>
-                <button type="button"
                   class="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
                   @click="$emit('edit', product)">
                   Edit
@@ -109,7 +104,6 @@ defineProps<{
 
 defineEmits<{
   'update:currentPage': [value: number]
-  view: [product: Product]
   edit: [product: Product]
   delete: [product: Product]
 }>()
