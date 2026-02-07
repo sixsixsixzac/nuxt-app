@@ -2,18 +2,17 @@
   <div class="p-6">
     <h1 class="text-2xl font-semibold mb-4">Products</h1>
 
-    <div class="mb-4">
-      <MultiSelect
-        v-model="selectedCategoryIds"
-        :options="categoryOptions"
-        option-label="label"
-        option-value="id"
-        filter
-        placeholder="Filter by category"
-        :max-selected-labels="3"
-        class="w-full md:w-80"
-      />
+    <div class="mb-4 flex flex-wrap items-center gap-3">
+      <MultiSelect v-model="selectedCategoryIds" :options="categoryOptions" option-label="label" option-value="id"
+        filter placeholder="Filter by category" :max-selected-labels="3" class="w-full md:w-80" />
+      <button type="button" class="rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+        @click="openAddModal">
+        Add product
+      </button>
     </div>
+
+    <ProductFormModal v-model:visible="formModalVisible" :product="editingProduct" :categories="categories"
+      @submit="onFormSubmit" />
 
     <div v-if="error" class="text-red-600">{{ error?.message }}</div>
     <ProductsTableSkeleton v-else-if="pending" :rows="PAGE_SIZE" />
@@ -28,7 +27,6 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
             </tr>
@@ -36,19 +34,27 @@
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-for="product in products" :key="product.id" class="hover:bg-gray-50">
               <td class="px-4 py-3">
-                <img v-if="product.thumbnail" :src="product.thumbnail" :alt="product.title"
-                  class="h-10 w-10 rounded object-cover" />
-                <span v-else
-                  class="inline-flex h-10 w-10 items-center justify-center rounded bg-gray-200 text-xs text-gray-500">—</span>
+                <img
+                  v-if="product.thumbnail"
+                  :src="product.thumbnail"
+                  :alt="product.title"
+                  class="h-10 w-10 rounded object-cover"
+                  @error="(e: Event) => ((e.target as HTMLImageElement).src = '/404.png')"
+                />
+                <img
+                  v-else
+                  src="/404.png"
+                  :alt="product.title"
+                  class="h-10 w-10 rounded object-cover"
+                />
               </td>
               <td class="px-4 py-3 text-sm text-gray-900">{{ product.title }}</td>
               <td class="px-4 py-3 text-sm text-gray-600">{{ product.brand }}</td>
-              <td class="px-4 py-3 text-sm text-gray-600">{{ product.category }}</td>
-              <td class="px-4 py-3 text-sm text-right font-medium">${{ product.price }}</td>
+              <td class="px-4 py-3 text-sm text-gray-600">{{ product.category ? product.category.charAt(0).toUpperCase() + product.category.slice(1) : '' }}</td>
+              <td class="px-4 py-3 text-sm text-right font-medium">฿{{ product.price }}</td>
               <td class="px-4 py-3 text-sm text-right">{{ product.discountPercentage != null ?
                 product.discountPercentage
                 + '%' : '—' }}</td>
-              <td class="px-4 py-3 text-sm text-right">{{ product.rating }}</td>
               <td class="px-4 py-3 text-sm text-right">{{ product.stock }}</td>
               <td class="px-4 py-3 text-center">
                 <div class="flex items-center justify-center gap-2">
@@ -108,10 +114,56 @@
 
 <script setup lang="ts">
 import type { Product } from '../composables/useProducts'
-import { deleteProduct } from '../composables/useProducts'
+import type { ProductFormPayload } from '../composables/useProducts'
+import { createProduct, deleteProduct, updateProduct } from '../composables/useProducts'
 
 const confirm = useConfirm()
 const toast = useToast()
+
+const formModalVisible = ref(false)
+const editingProduct = ref<Product | null>(null)
+
+function openAddModal() {
+  editingProduct.value = null
+  formModalVisible.value = true
+}
+
+function onEdit(product: Product) {
+  editingProduct.value = product
+  formModalVisible.value = true
+}
+
+async function onFormSubmit(payload: ProductFormPayload) {
+  try {
+    if (payload.id != null) {
+      const { id, ...rest } = payload
+      const updated = await updateProduct(id, rest)
+      replaceProduct(id, updated)
+      toast.add({
+        severity: 'success',
+        summary: 'Updated',
+        detail: `"${payload.title}" has been updated.`,
+        life: 3000,
+      })
+    } else {
+      const created = await createProduct(payload)
+      prependProduct(created)
+      toast.add({
+        severity: 'success',
+        summary: 'Added',
+        detail: `"${payload.title}" has been added.`,
+        life: 3000,
+      })
+    }
+  } catch (e) {
+    toast.add({
+      severity: 'error',
+      summary: payload.id != null ? 'Update failed' : 'Add failed',
+      detail: e instanceof Error ? e.message : 'Something went wrong.',
+      life: 5000,
+    })
+  }
+}
 
 const PAGE_SIZE = 10
 const selectedCategoryIds = ref<number[]>([])
@@ -130,7 +182,7 @@ const categoryOptions = computed(() =>
   }),
 )
 
-const { products, total, pending, error } = await useProducts({
+const { products, total, pending, error, prependProduct, replaceProduct, removeProduct } = await useProducts({
   limit: PAGE_SIZE,
   skip,
   categoryIds: selectedCategoryIds,
@@ -161,10 +213,6 @@ function onView(product: Product) {
   console.log('View', product.id)
 }
 
-function onEdit(product: Product) {
-  console.log('Edit', product.id)
-}
-
 function onDelete(product: Product) {
   confirm.require({
     message: `Are you sure you want to delete "${product.title}"?`,
@@ -174,7 +222,7 @@ function onDelete(product: Product) {
     accept: async () => {
       try {
         await deleteProduct(product.id)
-        await refreshNuxtData()
+        removeProduct(product.id)
         toast.add({
           severity: 'success',
           summary: 'Deleted',

@@ -25,6 +25,8 @@ async function connectDb() {
 
 app.get('/categories', categoryController.list)
 app.get('/products', productController.list)
+app.post('/products', productController.create)
+app.put('/products/:id', productController.update)
 app.delete('/products/:id', productController.remove)
 
 async function start() {

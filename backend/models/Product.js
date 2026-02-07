@@ -9,7 +9,6 @@ const productSchema = new mongoose.Schema(
     categoryId: { type: Number, required: true },
     price: { type: Number, required: true },
     discountPercentage: { type: Number },
-    rating: { type: Number, default: 0 },
     stock: { type: Number, default: 0 },
   },
   { timestamps: true },

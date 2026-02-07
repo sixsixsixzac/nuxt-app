@@ -50,7 +50,6 @@ async function seed() {
       categoryId,
       price: p.price,
       discountPercentage: p.discountPercentage,
-      rating: p.rating ?? 0,
       stock: p.stock ?? 0,
     }
   })

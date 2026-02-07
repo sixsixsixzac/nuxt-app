@@ -4,9 +4,9 @@ export interface Product {
   thumbnail?: string
   brand?: string
   category?: string
+  categoryId?: number
   price: number
   discountPercentage?: number
-  rating?: number
   stock?: number
 }
 
@@ -43,13 +43,74 @@ export function useProducts(options: {
   const products = computed(() => data.value?.products ?? [])
   const total = computed(() => data.value?.total ?? 0)
 
+  function prependProduct(product: Product) {
+    if (data.value) {
+      data.value = {
+        ...data.value,
+        products: [product, ...data.value.products],
+        total: data.value.total + 1,
+      }
+    }
+  }
+
+  function replaceProduct(id: number, product: Product) {
+    if (data.value) {
+      data.value = {
+        ...data.value,
+        products: data.value.products.map((p) => (p.id === id ? product : p)),
+      }
+    }
+  }
+
+  function removeProduct(id: number) {
+    if (data.value) {
+      data.value = {
+        ...data.value,
+        products: data.value.products.filter((p) => p.id !== id),
+        total: Math.max(0, data.value.total - 1),
+      }
+    }
+  }
+
   return {
     products,
     total,
     pending,
     error,
     refresh,
+    prependProduct,
+    replaceProduct,
+    removeProduct,
   }
+}
+
+export interface ProductFormPayload {
+  id?: number
+  title: string
+  thumbnail?: string
+  brand?: string
+  categoryId: number
+  price: number
+  discountPercentage?: number
+  stock?: number
+}
+
+export async function createProduct(payload: Omit<ProductFormPayload, 'id'>): Promise<Product> {
+  const config = useRuntimeConfig()
+  const base = config.public.apiBase as string
+  return $fetch<Product>(`${base}/products`, {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export async function updateProduct(id: number, payload: Omit<ProductFormPayload, 'id'>): Promise<Product> {
+  const config = useRuntimeConfig()
+  const base = config.public.apiBase as string
+  return $fetch<Product>(`${base}/products/${id}`, {
+    method: 'PUT',
+    body: payload,
+  })
 }
 
 export async function deleteProduct(id: number): Promise<void> {

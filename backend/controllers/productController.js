@@ -24,7 +24,7 @@ function parseSelectFields(select) {
 function toProductResponse(doc, categoryNameByCategoryId, extra = {}) {
   const { _id, __v, ...rest } = doc
   const categoryId = rest.categoryId
-  const categoryName = categoryNameByCategoryId[categoryId] ?? ''
+  const categoryName = categoryNameByCategoryId[categoryId] ?? 'NONE'
 
   return {
     ...rest,
@@ -55,6 +55,62 @@ export async function list(req, res) {
       skip,
       limit,
     })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
+export async function create(req, res) {
+  try {
+    const body = req.body || {}
+    const maxDoc = await Product.findOne().sort({ id: -1 }).select('id').lean()
+    const nextId = (maxDoc?.id ?? 0) + 1
+    const doc = {
+      id: nextId,
+      title: body.title ?? '',
+      thumbnail: body.thumbnail ?? '',
+      brand: body.brand ?? '',
+      categoryId: Number(body.categoryId),
+      price: Number(body.price),
+      discountPercentage: body.discountPercentage != null ? Number(body.discountPercentage) : undefined,
+      stock: body.stock != null ? Number(body.stock) : 0,
+    }
+    if (!doc.title || Number.isNaN(doc.categoryId) || Number.isNaN(doc.price)) {
+      return res.status(400).json({ error: 'Missing or invalid title, categoryId, or price' })
+    }
+    const product = await Product.create(doc)
+    const categoryNameByCategoryId = await loadCategoryNameMap()
+    res.status(201).json(toProductResponse(product.toObject(), categoryNameByCategoryId))
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
+export async function update(req, res) {
+  try {
+    const id = Number(req.params.id)
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid product id' })
+    }
+    const body = req.body || {}
+    const product = await Product.findOneAndUpdate(
+      { id },
+      {
+        title: body.title ?? undefined,
+        thumbnail: body.thumbnail,
+        brand: body.brand,
+        categoryId: body.categoryId != null ? Number(body.categoryId) : undefined,
+        price: body.price != null ? Number(body.price) : undefined,
+        discountPercentage: body.discountPercentage != null ? Number(body.discountPercentage) : undefined,
+        stock: body.stock != null ? Number(body.stock) : undefined,
+      },
+      { new: true, runValidators: true },
+    ).lean()
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' })
+    }
+    const categoryNameByCategoryId = await loadCategoryNameMap()
+    res.json(toProductResponse(product, categoryNameByCategoryId))
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
