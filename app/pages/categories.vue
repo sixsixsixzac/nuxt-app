@@ -11,10 +11,17 @@
     <CategoryFormModal v-model:visible="formModalVisible" :category="editingCategory" @submit="onFormSubmit" />
 
     <div v-if="error" class="text-red-600">{{ error?.message }}</div>
-    <div v-else-if="pending" class="text-gray-500">Loading…</div>
+    <CategoryTableSkeleton v-else-if="pending" :rows="PAGE_SIZE" />
     <CategoryTable
       v-else
+      v-model:current-page="currentPage"
       :categories="categories"
+      :total-pages="totalPages"
+      :range-start="rangeStart"
+      :range-end="rangeEnd"
+      :total="total"
+      :page-numbers="pageNumbers"
+      @view="onView"
       @edit="onEdit"
       @delete="onDelete"
     />
@@ -28,10 +35,27 @@ import { createCategory, deleteCategory, updateCategory } from '../composables/u
 const confirm = useConfirm()
 const toast = useToast()
 
+const PAGE_SIZE = 10
+const currentPage = ref(1)
+const skip = computed(() => (currentPage.value - 1) * PAGE_SIZE)
+
+const { categories, total, pending, error, prependCategory, replaceCategory, removeCategory } = await useCategories({
+  limit: PAGE_SIZE,
+  skip,
+})
+
+const { totalPages, rangeStart, rangeEnd, pageNumbers } = usePagination({
+  pageSize: PAGE_SIZE,
+  total: () => total.value,
+  currentPage: () => currentPage.value,
+})
+
 const formModalVisible = ref(false)
 const editingCategory = ref<Category | null>(null)
 
-const { categories, pending, error, prependCategory, replaceCategory, removeCategory } = await useCategories()
+function onView(category: Category) {
+  navigateTo({ path: '/', query: { categoryId: String(category.id) } })
+}
 
 function openAddModal() {
   editingCategory.value = null
@@ -78,7 +102,7 @@ async function onFormSubmit(payload: { id?: number; name: string }) {
 }
 
 function onDelete(category: Category) {
-  const displayName = category.name.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+  const displayName = formatCategoryName(category.name)
   confirm.require({
     message: `Are you sure you want to delete "${displayName}"?`,
     header: 'Delete category',

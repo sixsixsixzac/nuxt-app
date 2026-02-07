@@ -33,11 +33,9 @@
             </td>
             <td class="px-4 py-3 text-sm text-gray-900">{{ product.title }}</td>
             <td class="px-4 py-3 text-sm text-gray-600">{{ product.brand }}</td>
-            <td class="px-4 py-3 text-sm text-gray-600">{{ product.category ? product.category.charAt(0).toUpperCase() + product.category.slice(1) : '' }}</td>
-            <td class="px-4 py-3 text-sm text-right font-medium">฿{{ product.price }}</td>
-            <td class="px-4 py-3 text-sm text-right">{{ product.discountPercentage != null ?
-              product.discountPercentage
-              + '%' : '—' }}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ product.category ? formatCategoryName(product.category) : '' }}</td>
+            <td class="px-4 py-3 text-sm text-right font-medium">{{ formatPrice(product.price) }}</td>
+            <td class="px-4 py-3 text-sm text-right">{{ formatDiscount(product.discountPercentage) }}</td>
             <td class="px-4 py-3 text-sm text-right">{{ product.stock }}</td>
             <td class="px-4 py-3 text-center">
               <div class="flex items-center justify-center gap-2">
@@ -58,34 +56,15 @@
       </table>
     </div>
 
-    <div v-if="totalPages > 1"
-      class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
-      <p class="text-sm text-gray-600">
-        Showing {{ rangeStart }}–{{ rangeEnd }} of {{ total }}
-      </p>
-      <nav class="flex items-center gap-1" aria-label="Pagination">
-        <button type="button"
-          class="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
-          :disabled="currentPage <= 1" aria-label="Previous page" @click="$emit('update:currentPage', currentPage - 1)">
-          Previous
-        </button>
-        <template v-for="p in pageNumbers" :key="String(p)">
-          <button v-if="p !== '…'" type="button"
-            class="min-w-[2.25rem] rounded px-3 py-2 text-sm font-medium transition-colors" :class="p === currentPage
-              ? 'bg-emerald-600 text-white'
-              : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'"
-            :aria-current="p === currentPage ? 'page' : undefined" @click="$emit('update:currentPage', p)">
-            {{ p }}
-          </button>
-          <span v-else class="px-2 py-2 text-gray-400">…</span>
-        </template>
-        <button type="button"
-          class="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
-          :disabled="currentPage >= totalPages" aria-label="Next page" @click="$emit('update:currentPage', currentPage + 1)">
-          Next
-        </button>
-      </nav>
-    </div>
+    <PaginationNav
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      :range-start="rangeStart"
+      :range-end="rangeEnd"
+      :total="total"
+      :page-numbers="pageNumbers"
+      @update:current-page="$emit('update:currentPage', $event)"
+    />
   </div>
 </template>
 

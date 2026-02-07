@@ -188,11 +188,7 @@ function createEmptyForm(): ProductFormPayload {
 }
 
 function formatCategoryLabel(category: Category): string {
-  const formattedName = category.name
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-  return `${formattedName} (${category.items})`
+  return `${formatCategoryName(category.name)} (${category.items})`
 }
 
 function findCategoryId(product: Product): number {

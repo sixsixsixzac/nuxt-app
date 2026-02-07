@@ -1,8 +1,14 @@
 import { Category } from '../models/Category.js'
 import { Product } from '../models/Product.js'
 
+const DEFAULT_LIMIT = 10
+const MAX_LIMIT = 100
+
 export async function list(req, res) {
   try {
+    const limit = Math.min(MAX_LIMIT, Math.max(1, Number(req.query.limit) || DEFAULT_LIMIT))
+    const skip = Math.max(0, Number(req.query.skip) || 0)
+
     const [categories, countByCategoryId] = await Promise.all([
       Category.find().sort({ id: 1 }).lean(),
       Product.aggregate([{ $group: { _id: '$categoryId', count: { $sum: 1 } } }]).then((rows) =>
@@ -10,7 +16,7 @@ export async function list(req, res) {
       ),
     ])
 
-    const result = categories
+    const combined = categories
       .map((c) => ({
         id: c.id,
         name: c.name,
@@ -18,7 +24,15 @@ export async function list(req, res) {
       }))
       .sort((a, b) => b.items - a.items)
 
-    res.json(result)
+    const total = combined.length
+    const result = combined.slice(skip, skip + limit)
+
+    res.json({
+      categories: result,
+      total,
+      skip,
+      limit,
+    })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

@@ -106,20 +106,23 @@ watch(searchQuery, (value) => {
   }, DEBOUNCE_MS)
 }, { immediate: true })
 
-const selectedCategoryIds = ref<number[]>([])
+const route = useRoute()
+const selectedCategoryIds = ref<number[]>(
+  (() => {
+    const id = Number(route.query.categoryId)
+    return route.query.categoryId && !Number.isNaN(id) ? [id] : []
+  })(),
+)
 const currentPage = ref(1)
 const skip = computed(() => (currentPage.value - 1) * PAGE_SIZE)
 
-const { categories } = await useCategories()
+const { categories } = await useCategories({ limit: 1000, skip: 0 })
 
 const categoryOptions = computed(() =>
-  categories.value.map((c) => {
-    const name = c.name.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-    return {
-      ...c,
-      label: `${name} (${c.items})`,
-    }
-  }),
+  categories.value.map((c) => ({
+    ...c,
+    label: `${formatCategoryName(c.name)} (${c.items})`,
+  })),
 )
 
 const { products, total, pending, error, prependProduct, replaceProduct, removeProduct } = await useProducts({
@@ -132,23 +135,10 @@ const { products, total, pending, error, prependProduct, replaceProduct, removeP
 watch(selectedCategoryIds, () => { currentPage.value = 1 }, { deep: true })
 watch(debouncedSearch, () => { currentPage.value = 1 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
-const rangeStart = computed(() => total.value === 0 ? 0 : (currentPage.value - 1) * PAGE_SIZE + 1)
-const rangeEnd = computed(() => Math.min(currentPage.value * PAGE_SIZE, total.value))
-
-const pageNumbers = computed(() => {
-  const total = totalPages.value
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-  const p = currentPage.value
-  const pages: (number | '…')[] = []
-  pages.push(1)
-  if (p > 3) pages.push('…')
-  for (let i = Math.max(2, p - 1); i <= Math.min(total - 1, p + 1); i++) {
-    if (!pages.includes(i)) pages.push(i)
-  }
-  if (p < total - 2) pages.push('…')
-  if (total > 1) pages.push(total)
-  return pages
+const { totalPages, rangeStart, rangeEnd, pageNumbers } = usePagination({
+  pageSize: PAGE_SIZE,
+  total: () => total.value,
+  currentPage: () => currentPage.value,
 })
 
 function onDelete(product: Product) {
