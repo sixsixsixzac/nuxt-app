@@ -17,18 +17,27 @@ interface ProductsResponse {
   limit: number
 }
 
-export function useProducts(options: { limit: number; skip: MaybeRefOrGetter<number> }) {
+export function useProducts(options: {
+  limit: number
+  skip: MaybeRefOrGetter<number>
+  categoryIds?: MaybeRefOrGetter<number[]>
+}) {
   const config = useRuntimeConfig()
   const base = config.public.apiBase as string
   const skipRef = computed(() => toValue(options.skip))
+  const categoryIdsRef = computed(() => toValue(options.categoryIds ?? []) ?? [])
 
   const { data, pending, error, refresh } = useAsyncData(
-    () => `products-${options.limit}-${skipRef.value}`,
+    () => `products-${options.limit}-${skipRef.value}-${categoryIdsRef.value.join(',')}`,
     () =>
       $fetch<ProductsResponse>(`${base}/products`, {
-        params: { limit: options.limit, skip: skipRef.value },
+        params: {
+          limit: options.limit,
+          skip: skipRef.value,
+          ...(categoryIdsRef.value.length > 0 ? { categoryId: categoryIdsRef.value } : {}),
+        },
       }),
-    { watch: [skipRef] },
+    { watch: [skipRef, categoryIdsRef] },
   )
 
   const products = computed(() => data.value?.products ?? [])

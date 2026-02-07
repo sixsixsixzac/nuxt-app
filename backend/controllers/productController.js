@@ -1,36 +1,56 @@
 import { Product } from '../models/Product.js'
 import { Category } from '../models/Category.js'
 
-async function getCategoryByIdMap() {
+const DEFAULT_LIMIT = 10
+const MAX_LIMIT = 100
+
+async function loadCategoryNameMap() {
   const categories = await Category.find().lean()
   return Object.fromEntries(categories.map((c) => [c.id, c.name]))
 }
 
+function parseCategoryIds(raw) {
+  if (raw === undefined || raw === '') return []
+  const values = Array.isArray(raw) ? raw : [raw]
+  return values.map(Number).filter((n) => !Number.isNaN(n))
+}
+
+function parseSelectFields(select) {
+  if (!select || typeof select !== 'string') return null
+  const fields = select.split(',').map((s) => s.trim()).filter(Boolean)
+  return fields.length > 0 ? fields.join(' ') : null
+}
+
+function toProductResponse(doc, categoryNameByCategoryId, extra = {}) {
+  const { _id, __v, ...rest } = doc
+  const categoryId = rest.categoryId
+  const categoryName = categoryNameByCategoryId[categoryId] ?? ''
+
+  return {
+    ...rest,
+    category: categoryName,
+    ...extra,
+  }
+}
+
 export async function list(req, res) {
   try {
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10))
+    const limit = Math.min(MAX_LIMIT, Math.max(1, Number(req.query.limit) || DEFAULT_LIMIT))
     const skip = Math.max(0, Number(req.query.skip) || 0)
-    const select = req.query.select
+    const categoryIds = parseCategoryIds(req.query.categoryId)
+    const selectFields = parseSelectFields(req.query.select)
 
-    const query = Product.find().sort({ id: 1 })
-    const total = await Product.countDocuments()
+    const filter = categoryIds.length > 0 ? { categoryId: { $in: categoryIds } } : {}
+    const total = await Product.countDocuments(filter)
 
-    if (select && String(select).trim()) {
-      const fields = String(select).split(',').map((s) => s.trim()).filter(Boolean)
-      if (fields.length) query.select(fields.join(' '))
-    }
+    const query = Product.find(filter).sort({ id: 1 }).skip(skip).limit(limit).lean()
+    if (selectFields) query.select(selectFields)
 
-    const products = await query.skip(skip).limit(limit).lean()
-    const categoryById = await getCategoryByIdMap()
+    const products = await query
+    const categoryNameByCategoryId = await loadCategoryNameMap()
 
     res.json({
-      products: products.map((p) => {
-        const { _id, __v, ...rest } = p
-        return {
-          ...rest,
-          category: categoryById[rest.categoryId] ?? '',
-        }
-      }),
+      products: products.map((p) => toProductResponse(p, categoryNameByCategoryId)),
       total,
       skip,
       limit,
@@ -52,16 +72,15 @@ export async function remove(req, res) {
       return res.status(404).json({ error: 'Product not found' })
     }
 
+    const categoryNameByCategoryId = await loadCategoryNameMap()
     const doc = product.toObject()
-    const { _id, __v, ...rest } = doc
-    const categoryById = await getCategoryByIdMap()
 
-    res.json({
-      ...rest,
-      category: categoryById[rest.categoryId] ?? '',
-      isDeleted: true,
-      deletedOn: new Date().toISOString(),
-    })
+    res.json(
+      toProductResponse(doc, categoryNameByCategoryId, {
+        isDeleted: true,
+        deletedOn: new Date().toISOString(),
+      }),
+    )
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

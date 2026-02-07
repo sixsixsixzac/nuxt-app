@@ -1,6 +1,20 @@
 <template>
   <div class="p-6">
     <h1 class="text-2xl font-semibold mb-4">Products</h1>
+
+    <div class="mb-4">
+      <MultiSelect
+        v-model="selectedCategoryIds"
+        :options="categoryOptions"
+        option-label="label"
+        option-value="id"
+        filter
+        placeholder="Filter by category"
+        :max-selected-labels="3"
+        class="w-full md:w-80"
+      />
+    </div>
+
     <div v-if="error" class="text-red-600">{{ error?.message }}</div>
     <ProductsTableSkeleton v-else-if="pending" :rows="PAGE_SIZE" />
     <template v-else>
@@ -93,20 +107,36 @@
 </template>
 
 <script setup lang="ts">
-import type { Product } from '~/composables/useProducts'
-import { deleteProduct } from '~/composables/useProducts'
+import type { Product } from '../composables/useProducts'
+import { deleteProduct } from '../composables/useProducts'
 
 const confirm = useConfirm()
 const toast = useToast()
 
 const PAGE_SIZE = 10
+const selectedCategoryIds = ref<number[]>([])
 const currentPage = ref(1)
 const skip = computed(() => (currentPage.value - 1) * PAGE_SIZE)
+
+const { categories } = await useCategories()
+
+const categoryOptions = computed(() =>
+  categories.value.map((c) => {
+    const name = c.name.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    return {
+      ...c,
+      label: `${name} (${c.items})`,
+    }
+  }),
+)
 
 const { products, total, pending, error } = await useProducts({
   limit: PAGE_SIZE,
   skip,
+  categoryIds: selectedCategoryIds,
 })
+
+watch(selectedCategoryIds, () => { currentPage.value = 1 }, { deep: true })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
 const rangeStart = computed(() => total.value === 0 ? 0 : (currentPage.value - 1) * PAGE_SIZE + 1)
