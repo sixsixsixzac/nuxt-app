@@ -1,6 +1,8 @@
 import express from 'express'
+import cors from 'cors'
 
 const app = express()
+app.use(cors({ origin: true, credentials: true }))
 const PORT = Number(process.env.PORT) || 4000
 
 app.get('/products', async (_req, res) => {
