@@ -103,14 +103,12 @@ export async function remove(req, res) {
     if (Number.isNaN(id)) {
       return res.status(400).json({ error: 'Invalid category id' })
     }
-    const productCount = await Product.countDocuments({ categoryId: id })
-    if (productCount > 0) {
-      return res.status(400).json({ error: `Cannot delete category: ${productCount} product(s) use it` })
-    }
-    const category = await Category.findOneAndDelete({ id }).lean()
+    const category = await Category.findOne({ id }).lean()
     if (!category) {
       return res.status(404).json({ error: 'Category not found' })
     }
+    await Product.updateMany({ categoryId: id }, { $set: { categoryId: null } })
+    await Category.findOneAndDelete({ id })
     res.json({ id: category.id, name: category.name, deleted: true })
   } catch (err) {
     res.status(500).json({ error: err.message })

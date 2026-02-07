@@ -118,11 +118,14 @@ function onDelete(category: Category) {
           detail: 'Category has been deleted.',
           life: 3000,
         })
-      } catch (e) {
+      } catch (e: unknown) {
+        const detail =
+          (e as { data?: { error?: string } })?.data?.error ??
+          (e instanceof Error ? e.message : 'Could not delete category.')
         toast.add({
           severity: 'error',
           summary: 'Delete failed',
-          detail: e instanceof Error ? e.message : 'Could not delete category.',
+          detail,
           life: 5000,
         })
       }

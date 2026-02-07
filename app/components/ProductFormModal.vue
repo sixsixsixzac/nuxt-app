@@ -205,12 +205,13 @@ function findCategoryId(product: Product): number {
 function initializeForm(): void {
   if (props.product) {
     const p = props.product
+    const hasNoCategory = p.categoryId == null || p.category === 'NONE'
     form.value = {
       id: p.id,
       title: p.title ?? '',
       thumbnail: p.thumbnail ?? '',
       brand: p.brand ?? '',
-      categoryId: p.categoryId ?? findCategoryId(p),
+      categoryId: hasNoCategory ? 0 : (p.categoryId ?? findCategoryId(p)),
       price: p.price ?? 0,
       discountPercentage: p.discountPercentage,
       stock: p.stock,
