@@ -9,7 +9,10 @@ npm run dev
 cd backend
 npm install
 npm run dev
+
 ```
+## ENV
+Copy .exampl.env to .env the credentials is temporary and using for test only
 
 ## Database Structure
 
