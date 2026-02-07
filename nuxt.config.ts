@@ -3,7 +3,6 @@ import Aura from '@primeuix/themes/aura'
 export default defineNuxtConfig({
   srcDir: 'app',
   compatibilityDate: '2025-07-15',
-  css: ['~/assets/css/main.css'],
   devtools: { enabled: true },
   devServer: {
     port: 3000,
@@ -14,10 +13,16 @@ export default defineNuxtConfig({
     },
   },
   modules: ['@nuxtjs/tailwindcss', '@primevue/nuxt-module'],
+  tailwindcss: {
+    cssPath: '~/assets/css/main.css',
+  },
   primevue: {
     options: {
       theme: {
         preset: Aura,
+        options: {
+          darkModeSelector: false,
+        },
       },
     },
   },
